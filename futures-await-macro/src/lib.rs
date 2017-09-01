@@ -30,6 +30,7 @@ macro_rules! await {
 #[macro_export]
 macro_rules! yeld {
     ($e:expr) => ({
-        yield ::futures::Async::Ready($e)
+        let e = $e;
+        yield ::futures::Async::Ready(e)
     })
 }
