@@ -53,6 +53,4 @@ fn handle_client(socket: TcpStream) -> io::Result<u64> {
         yeld!(line.len() as u64);
         writer = await!(tokio_io::io::write_all(writer, line))?.0;
     }
-
-    Ok(())
 }

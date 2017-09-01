@@ -356,16 +356,16 @@ pub fn async_stream(attribute: TokenStream, function: TokenStream) -> TokenStrea
             #where_clause
         {
             #maybe_boxed (::futures::__rt::gen_stream(move || {
-                let __e = {
+                {
                     #( let #patterns = #temp_bindings; )*
-                    #block
-                };
+                    #block;
+                }
 
                 // Ensure that this closure is a generator, even if it doesn't
                 // have any `yield` statements.
                 #[allow(unreachable_code)]
                 {
-                    return __e;
+                    return Ok(());
                     loop { yield ::futures::Async::NotReady }
                 }
             }))
