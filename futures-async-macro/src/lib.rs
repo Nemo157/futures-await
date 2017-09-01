@@ -391,6 +391,21 @@ pub fn async_block(input: TokenStream) -> TokenStream {
     }).into()
 }
 
+#[proc_macro]
+pub fn async_stream_block(input: TokenStream) -> TokenStream {
+    let input = TokenStream::from(TokenTree {
+        kind: TokenNode::Group(Delimiter::Brace, input),
+        span: Default::default(),
+    });
+    let expr = syn::parse(input)
+        .expect("failed to parse tokens as an expression");
+    let expr = ExpandAsyncFor.fold_expr(expr);
+
+    (quote! {
+        ::futures::__rt::gen_stream(move || { #expr })
+    }).into()
+}
+
 struct ExpandAsyncFor;
 
 impl Folder for ExpandAsyncFor {
