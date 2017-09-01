@@ -86,24 +86,18 @@ pub mod __rt {
         type MyError = T::Error;
     }
 
-    /// Small shim to translate from a generator to a future.
+    /// Small shim to translate from a generator to a future or stream.
     ///
     /// This is the translation layer from the generator/coroutine protocol to
     /// the futures protocol.
-    struct GenFuture<T>(T);
-
-    /// Small shim to translate from a generator to a stream.
-    ///
-    /// This is the translation layer from the generator/coroutine protocol to
-    /// the streaming futures protocol.
-    struct GenStream<U, T>(T, PhantomData<U>);
+    struct GenFuture<T, U>(T, PhantomData<U>);
 
     pub fn gen<T>(t: T) -> impl Future<Item = <T::Return as Try>::Ok,
                                        Error = <T::Return as Try>::Error>
         where T: Generator<Yield = Async<!>>,
               T::Return: Try,
     {
-        GenFuture(t)
+        GenFuture(t, PhantomData::<()>)
     }
 
     pub fn gen_stream<T, U>(t: T) -> impl Stream<Item = U,
@@ -111,10 +105,10 @@ pub mod __rt {
         where T: Generator<Yield = Async<U>>,
               T::Return: Try<Ok = ()>,
     {
-        GenStream(t, PhantomData)
+        GenFuture(t, PhantomData)
     }
 
-    impl<T> Future for GenFuture<T>
+    impl<T, U> Future for GenFuture<T, U>
         where T: Generator<Yield = Async<!>>,
               T::Return: Try,
     {
@@ -129,7 +123,7 @@ pub mod __rt {
         }
     }
 
-    impl<U, T> Stream for GenStream<U, T>
+    impl<T, U> Stream for GenFuture<T, U>
         where T: Generator<Yield = Async<U>>,
               T::Return: Try<Ok = ()>,
     {
