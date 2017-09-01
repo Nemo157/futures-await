@@ -189,7 +189,184 @@ pub fn async(attribute: TokenStream, function: TokenStream) -> TokenStream {
                 #[allow(unreachable_code)]
                 {
                     return __e;
-                    loop { yield }
+                    loop { yield ::futures::Async::NotReady }
+                }
+            }))
+        }
+    };
+
+    // println!("{}", output);
+    output.into()
+}
+
+#[proc_macro_attribute]
+pub fn async_stream(attribute: TokenStream, function: TokenStream) -> TokenStream {
+    // Handle arguments to the #[async] attribute, if any
+    let attribute = attribute.to_string();
+    let boxed = if attribute == "( boxed )" {
+        true
+    } else if attribute == "" {
+        false
+    } else {
+        panic!("the #[async] attribute currently only takes `boxed` as an arg");
+    };
+
+    // Parse our item, expecting a function. This function may be an actual
+    // top-level function or it could be a method (typically dictated by the
+    // arguments). We then extract everything we'd like to use.
+    let Item { attrs, node } = syn::parse(function)
+        .expect("failed to parse tokens as a function");
+    let ItemFn {
+        ident,
+        vis,
+        unsafety,
+        constness,
+        abi,
+        block,
+        decl,
+        ..
+    } = match node {
+        ItemKind::Fn(item) => item,
+        _ => panic!("#[async] can only be applied to functions"),
+    };
+    let FnDecl { inputs, output, variadic, generics, .. } = { *decl };
+    let where_clause = &generics.where_clause;
+    assert!(!variadic, "variadic functions cannot be async");
+    let output = match output {
+        FunctionRetTy::Ty(t, _) => t,
+        FunctionRetTy::Default => {
+            TyTup {
+                tys: Default::default(),
+                lone_comma: Default::default(),
+                paren_token: Default::default(),
+            }.into()
+        }
+    };
+
+    // We've got to get a bit creative with our handling of arguments. For a
+    // number of reasons we translate this:
+    //
+    //      fn foo(ref a: u32) -> Result<u32, u32> {
+    //          // ...
+    //      }
+    //
+    // into roughly:
+    //
+    //      fn foo(__arg_0: u32) -> impl Future<...> {
+    //          gen(move || {
+    //              let ref a = __arg0;
+    //
+    //              // ...
+    //          })
+    //      }
+    //
+    // The intention here is to ensure that all local function variables get
+    // moved into the generator we're creating, and they're also all then bound
+    // appropriately according to their patterns and whatnot.
+    //
+    // We notably skip everything related to `self` which typically doesn't have
+    // many patterns with it and just gets captured naturally.
+    let mut inputs_no_patterns = Vec::new();
+    let mut patterns = Vec::new();
+    let mut temp_bindings = Vec::new();
+    for (i, input) in inputs.into_iter().enumerate() {
+        let input = input.into_item();
+
+        // `self: Box<Self>` will get captured naturally
+        let mut is_input_no_pattern = false;
+        if let FnArg::Captured(ref arg) = input {
+            if let Pat::Ident(PatIdent { ref ident, ..}) = arg.pat {
+                if ident == "self" {
+                    is_input_no_pattern = true;
+                }
+            }
+        }
+        if is_input_no_pattern {
+            inputs_no_patterns.push(input);
+            continue
+        }
+
+        match input {
+            // `a: B`
+            FnArg::Captured(ArgCaptured { pat, ty, .. }) => {
+                patterns.push(pat);
+                let ident = Ident::from(format!("__arg_{}", i));
+                temp_bindings.push(ident.clone());
+                let pat = PatIdent {
+                    mode: BindingMode::ByValue(Mutability::Immutable),
+                    ident: ident,
+                    at_token: None,
+                    subpat: None,
+                };
+                inputs_no_patterns.push(ArgCaptured {
+                    pat: pat.into(),
+                    ty: ty,
+                    colon_token: Default::default(),
+                }.into());
+            }
+
+            // Other `self`-related arguments get captured naturally
+            _ => {
+                inputs_no_patterns.push(input);
+            }
+        }
+    }
+
+    // This is the point where we handle
+    //
+    //      #[async]
+    //      for x in y {
+    //      }
+    //
+    // Basically just take all those expression and expand them.
+    let block = ExpandAsyncFor.fold_block(*block);
+
+    // TODO: can we lift the restriction that `futures` must be at the root of
+    //       the crate?
+    let return_ty = if boxed {
+        quote! {
+            Box<::futures::Stream<
+                Item = <#output as ::futures::__rt::MyTry>::MyOk,
+                Error = <#output as ::futures::__rt::MyTry>::MyError,
+            >>
+        }
+    } else {
+        // Dunno why this is buggy, hits weird typecheck errors in tests
+        //
+        // quote! {
+        //     impl ::futures::Future<
+        //         Item = <#output as ::futures::__rt::MyTry>::MyOk,
+        //         Error = <#output as ::futures::__rt::MyTry>::MyError,
+        //     >
+        // }
+
+        quote! { impl ::futures::__rt::MyStream<#output> }
+    };
+
+    let maybe_boxed = if boxed {
+        quote! { Box::new }
+    } else {
+        quote! { }
+    };
+
+    let output = quote! {
+        #(#attrs)*
+        #vis #unsafety #abi #constness
+        fn #ident #generics(#(#inputs_no_patterns),*) -> #return_ty
+            #where_clause
+        {
+            #maybe_boxed (::futures::__rt::gen_stream(move || {
+                let __e = {
+                    #( let #patterns = #temp_bindings; )*
+                    #block
+                };
+
+                // Ensure that this closure is a generator, even if it doesn't
+                // have any `yield` statements.
+                #[allow(unreachable_code)]
+                {
+                    return __e;
+                    loop { yield ::futures::Async::NotReady }
                 }
             }))
         }
@@ -249,7 +426,7 @@ impl Folder for ExpandAsyncFor {
                             }
                         }
                         futures_await::Async::NotReady => {
-                            yield;
+                            yield futures_await::Async::NotReady;
                             continue
                         }
                     }

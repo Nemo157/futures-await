@@ -22,7 +22,14 @@ macro_rules! await {
                     break ::futures::__rt::Err(e)
                 }
             }
-            yield
+            yield ::futures::Async::NotReady
         }
+    })
+}
+
+#[macro_export]
+macro_rules! yeld {
+    ($e:expr) => ({
+        yield ::futures::Async::Ready($e)
     })
 }
