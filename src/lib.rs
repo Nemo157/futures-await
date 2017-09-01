@@ -62,7 +62,7 @@ pub mod __rt {
     /// ```
     pub trait MyFuture<T: Try>: Future<Item=T::Ok, Error=T::Error> + 'static {}
 
-    pub trait MyStream<T: Try>: Stream<Item=T::Ok, Error=T::Error> + 'static {}
+    pub trait MyStream<T: Stream>: Stream<Item=T::Item, Error=T::Error> + 'static {}
 
     impl<F, T> MyFuture<T> for F
         where F: Future<Item = T::Ok, Error = T::Error> + ?Sized + 'static,
@@ -70,8 +70,8 @@ pub mod __rt {
     {}
 
     impl<F, T> MyStream<T> for F
-        where F: Stream<Item = T::Ok, Error = T::Error> + ?Sized + 'static,
-              T: Try,
+        where F: Stream<Item = T::Item, Error = T::Error> + ?Sized + 'static,
+              T: Stream,
     {}
 
     // Helper trait to use projections to get access to the `Try` trait's
