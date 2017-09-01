@@ -402,7 +402,7 @@ pub fn async_stream_block(input: TokenStream) -> TokenStream {
     let expr = ExpandAsyncFor.fold_expr(expr);
 
     (quote! {
-        ::futures::__rt::gen_stream(move || { #expr })
+        ::futures::__rt::gen_stream(move || { #expr; Ok(()) })
     }).into()
 }
 
