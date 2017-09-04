@@ -149,7 +149,7 @@ pub fn async(_attribute: TokenStream, function: TokenStream) -> TokenStream {
 
     let body_inner = quote! {
         ::futures::__rt::GenFuture(move || {
-            let __e: Result<_, _> = {
+            let __e: ::std::result::Result<_, _> = {
                 #( let #patterns = #temp_bindings; )*
                 #block
             };
