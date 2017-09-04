@@ -29,12 +29,7 @@ fn main() {
     let server = async_block! {
         #[async]
         for (client, _) in tcp.incoming() {
-            handle.spawn(handle_client(client).for_each(|n| {
-                println!("wrote {} bytes", n);
-                Ok(())
-            }).map_err(|e| {
-                println!("IO error {:?}", e);
-            }));
+            handle.spawn(handle_client(client));
         }
 
         Ok::<(), io::Error>(())
@@ -42,8 +37,22 @@ fn main() {
     core.run(server).unwrap();
 }
 
-#[async_stream(item = "u64")]
-fn handle_client(socket: TcpStream) -> io::Result<()> {
+#[async]
+fn handle_client(socket: TcpStream) -> impl Future<Item=(), Error=()> {
+    let results = handle_lines(socket)
+        .map_err(|e| println!("IO error {:?}", e));
+
+    #[async]
+    for n in results {
+        println!("wrote {} bytes", n);
+    }
+    println!("client disconnected");
+
+    Ok(())
+}
+
+#[async]
+fn handle_lines(socket: TcpStream) -> impl Stream<Item=u64, Error=io::Error> {
     let (reader, mut writer) = socket.split();
     let input = BufReader::new(reader);
 
