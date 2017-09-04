@@ -1,16 +1,22 @@
 [package]
+authors = ["Alex Crichton <alex@alexcrichton.com>"]
 name = "futures-await"
 version = "0.1.0"
-authors = ["Alex Crichton <alex@alexcrichton.com>"]
+
+[dependencies]
+error-chain = "0.10.0"
+futures = "0.1"
+
+[dependencies.futures-async-macro]
+path = "futures-async-macro"
+
+[dependencies.futures-await-macro]
+path = "futures-await-macro"
+
+[dev-dependencies]
+hyper = "0.11.2"
+tokio-core = "0.1"
+tokio-io = "0.1"
 
 [workspace]
 members = ["testcrate"]
-
-[dependencies]
-futures-async-macro = { path = "futures-async-macro" }
-futures-await-macro = { path = "futures-await-macro" }
-futures = "0.1"
-
-[dev-dependencies]
-tokio-core = "0.1"
-tokio-io = "0.1"
