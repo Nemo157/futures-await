@@ -13,20 +13,30 @@
 #![feature(proc_macro)]
 #![recursion_limit = "128"]
 
-// extern crate proc_macro2;
+extern crate proc_macro2;
 extern crate proc_macro;
 #[macro_use]
 extern crate quote;
 extern crate syn;
-// extern crate synom;
 
 use proc_macro::{TokenStream, TokenTree, Delimiter, TokenNode};
 use quote::{Tokens, ToTokens};
 use syn::*;
 use syn::fold::Folder;
+use proc_macro2::Span;
 
 #[proc_macro_attribute]
-pub fn async(_attribute: TokenStream, function: TokenStream) -> TokenStream {
+pub fn async(attribute: TokenStream, function: TokenStream) -> TokenStream {
+    // Handle arguments to the #[async] attribute, if any
+    let attribute = attribute.to_string();
+    let boxed = if attribute == "( boxed )" {
+        true
+    } else if attribute == "" {
+        false
+    } else {
+        panic!("the #[async] attribute currently only takes `boxed` as an arg");
+    };
+
     // Parse our item, expecting a function. This function may be an actual
     // top-level function or it could be a method (typically dictated by the
     // arguments). We then extract everything we'd like to use.
@@ -147,6 +157,7 @@ pub fn async(_attribute: TokenStream, function: TokenStream) -> TokenStream {
     // TODO: can we lift the restriction that `futures` must be at the root of
     //       the crate?
 
+    let output_span = first_last(&output);
     let body_inner = quote! {
         ::futures::__rt::GenFuture(move || {
             let __e: ::std::result::Result<_, _> = {
@@ -162,6 +173,12 @@ pub fn async(_attribute: TokenStream, function: TokenStream) -> TokenStream {
                 loop { yield ::futures::Async::NotReady }
             }
         })
+    };
+    let body_inner = if boxed {
+        let body = quote! { Box::new(#body_inner) };
+        respan(body.into(), &output_span)
+    } else {
+        body_inner.into()
     };
     let mut body = Tokens::new();
     body.append_delimited("{", (block.brace_token.0).0, |tokens| {
@@ -247,4 +264,25 @@ impl Folder for ExpandAsyncFor {
     fn fold_item(&mut self, item: Item) -> Item {
         item
     }
+}
+
+fn first_last(tokens: &ToTokens) -> (Span, Span) {
+    let mut spans = Tokens::new();
+    tokens.to_tokens(&mut spans);
+    let good_tokens = proc_macro2::TokenStream::from(spans).into_iter().collect::<Vec<_>>();
+    let first_span = good_tokens.first().map(|t| t.span).unwrap_or(Default::default());
+    let last_span = good_tokens.last().map(|t| t.span).unwrap_or(first_span);
+    (first_span, last_span)
+}
+
+fn respan(input: proc_macro2::TokenStream,
+          &(first_span, last_span): &(Span, Span)) -> proc_macro2::TokenStream {
+    let mut new_tokens = input.into_iter().collect::<Vec<_>>();
+    if let Some(token) = new_tokens.first_mut() {
+        token.span = first_span;
+    }
+    for token in new_tokens.iter_mut().skip(1) {
+        token.span = last_span;
+    }
+    new_tokens.into_iter().collect()
 }

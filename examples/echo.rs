@@ -37,8 +37,8 @@ fn main() {
     core.run(server).unwrap();
 }
 
-#[async]
-fn handle_client(socket: TcpStream) -> impl Future<Item=(), Error=()> {
+#[async(boxed)]
+fn handle_client(socket: TcpStream) -> Box<Future<Item=(), Error=()>> {
     let results = handle_lines(socket)
         .map_err(|e| println!("IO error {:?}", e));
 
