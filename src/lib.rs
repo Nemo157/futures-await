@@ -66,8 +66,6 @@ pub mod __rt {
               U: IsResult<Ok=()>
     {}
 
-    #[rustc_on_unimplemented = "async functions must return a `Result` or \
-                                a typedef of `Result`"]
     pub trait IsResult {
         type Ok;
         type Err;
@@ -81,6 +79,8 @@ pub mod __rt {
         fn into_result(self) -> Result<Self::Ok, Self::Err> { self }
     }
 
+    #[rustc_on_unimplemented = "#[async] functions returning `Stream`s should \
+                                use `stream_yield!` to yield values"]
     pub trait IsAsync {
         type Item;
 

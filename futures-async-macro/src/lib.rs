@@ -26,17 +26,7 @@ use syn::fold::Folder;
 use proc_macro2::Span;
 
 #[proc_macro_attribute]
-pub fn async(attribute: TokenStream, function: TokenStream) -> TokenStream {
-    // Handle arguments to the #[async] attribute, if any
-    let attribute = attribute.to_string();
-    let boxed = if attribute == "( boxed )" {
-        true
-    } else if attribute == "" {
-        false
-    } else {
-        panic!("the #[async] attribute currently only takes `boxed` as an arg");
-    };
-
+pub fn async(_attribute: TokenStream, function: TokenStream) -> TokenStream {
     // Parse our item, expecting a function. This function may be an actual
     // top-level function or it could be a method (typically dictated by the
     // arguments). We then extract everything we'd like to use.
@@ -173,6 +163,12 @@ pub fn async(attribute: TokenStream, function: TokenStream) -> TokenStream {
                 loop { yield ::futures::Async::NotReady }
             }
         })
+    };
+    let boxed = match output {
+        Ty::Path(_) => true,
+        Ty::ImplTrait(_) => false,
+        _ => panic!("#[async] function return type must be one of `impl \
+                    Future`, `impl Stream`, `Box<Future>` or `Box<Stream>`"),
     };
     let body_inner = if boxed {
         let body = quote! { Box::new(#body_inner) };
