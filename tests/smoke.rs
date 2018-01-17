@@ -13,80 +13,81 @@ use std::io;
 
 use futures::Never;
 use futures::future::poll_fn;
+use futures::stable::{StableFuture, block_on_stable};
 use futures::prelude::*;
 
-#[async_move]
-fn foo() -> Result<i32, i32> {
+#[async]
+fn foo() -> impl Future<Item=i32, Error=i32> {
     Ok(1)
 }
 
-#[async_move]
-extern fn _foo1() -> Result<i32, i32> {
+#[async]
+extern fn _foo1() -> impl Future<Item=i32, Error=i32> {
     Ok(1)
 }
 
-#[async_move]
-unsafe fn _foo2() -> io::Result<i32> {
+#[async]
+unsafe fn _foo2() -> impl Future<Item=i32, Error=io::Error> {
     Ok(1)
 }
 
-#[async_move]
-unsafe extern fn _foo3() -> io::Result<i32> {
+#[async]
+unsafe extern fn _foo3() -> impl Future<Item=i32, Error=io::Error> {
     Ok(1)
 }
 
-#[async_move]
-pub fn _foo4() -> io::Result<i32> {
+#[async]
+pub fn _foo4() -> impl Future<Item=i32, Error=io::Error> {
     Ok(1)
 }
 
-#[async_move]
-fn _foo5<T: Clone>(t: T) -> Result<T, i32> {
+#[async]
+fn _foo5<T: Clone + 'static>(t: T) -> impl Future<Item=T, Error=i32> {
     Ok(t.clone())
 }
 
-#[async_move]
-fn _foo6(ref a: i32) -> Result<i32, i32> {
+#[async]
+fn _foo6(ref a: i32) -> impl Future<Item=i32, Error=i32> {
     Err(*a)
 }
 
-#[async_move]
-fn _foo7<T>(t: T) -> Result<T, i32>
+#[async]
+fn _foo7<T>(t: T) -> impl Future<Item=T, Error=i32>
     where T: Clone,
 {
     Ok(t.clone())
 }
 
-#[async_move(boxed)]
-fn _foo8(a: i32, b: i32) -> Result<i32, i32> {
+#[async]
+fn _foo8(a: i32, b: i32) -> Box<Future<Item=i32, Error=i32>> {
     return Ok(a + b)
 }
 
-#[async_move(boxed_send)]
-fn _foo9() -> Result<(), Never> {
+#[async]
+fn _foo9() -> Box<Future<Item=(), Error=Never> + Send> {
     Ok(())
 }
 
-#[async_move]
-fn _bar() -> Result<i32, i32> {
+#[async]
+fn _bar() -> impl Future<Item=i32, Error=i32> {
     await!(foo())
 }
 
-#[async_move]
-fn _bar2() -> Result<i32, i32> {
+#[async]
+fn _bar2() -> impl Future<Item=i32, Error=i32> {
     let a = await!(foo())?;
     let b = await!(foo())?;
     Ok(a + b)
 }
 
-#[async_move]
-fn _bar3() -> Result<i32, i32> {
+#[async]
+fn _bar3() -> impl Future<Item=i32, Error=i32> {
     let (a, b) = await!(foo().join(foo()))?;
     Ok(a + b)
 }
 
-#[async_move]
-fn _bar4() -> Result<i32, i32> {
+#[async]
+fn _bar4() -> impl Future<Item=i32, Error=i32> {
     let mut cnt = 0;
     #[async]
     for x in futures::stream::iter_ok::<_, i32>(vec![1, 2, 3, 4]) {
@@ -95,22 +96,22 @@ fn _bar4() -> Result<i32, i32> {
     Ok(cnt)
 }
 
-#[async_stream_move(item = u64)]
-fn _stream1() -> Result<(), i32> {
+#[async]
+fn _stream1() -> impl Stream<Item=u64, Error=i32> {
     stream_yield!(0);
     stream_yield!(1);
     Ok(())
 }
 
-#[async_stream_move(item = T)]
-fn _stream2<T: Clone>(t: T) -> Result<(), i32> {
+#[async]
+fn _stream2<T: Clone>(t: T) -> impl Stream<Item=T, Error=i32> {
     stream_yield!(t.clone());
     stream_yield!(t.clone());
     Ok(())
 }
 
-#[async_stream_move(item = i32)]
-fn _stream3() -> Result<(), i32> {
+#[async]
+fn _stream3() -> impl Stream<Item=i32, Error=i32> {
     let mut cnt = 0;
     #[async]
     for x in futures::stream::iter_ok::<_, i32>(vec![1, 2, 3, 4]) {
@@ -120,8 +121,8 @@ fn _stream3() -> Result<(), i32> {
     Err(cnt)
 }
 
-#[async_stream_move(boxed, item = u64)]
-fn _stream4() -> Result<(), i32> {
+#[async]
+fn _stream4() -> Box<Stream<Item=u64, Error=i32>> {
     stream_yield!(0);
     stream_yield!(1);
     Ok(())
@@ -129,15 +130,15 @@ fn _stream4() -> Result<(), i32> {
 
 mod foo { pub struct Foo(pub i32); }
 
-#[async_stream_move(boxed, item = foo::Foo)]
-pub fn stream5() -> Result<(), i32> {
+#[async]
+pub fn stream5() -> Box<Stream<Item=foo::Foo, Error=i32>> {
     stream_yield!(foo::Foo(0));
     stream_yield!(foo::Foo(1));
     Ok(())
 }
 
-#[async_stream_move(boxed, item = i32)]
-pub fn _stream6() -> Result<(), i32> {
+#[async]
+pub fn _stream6() -> Box<Stream<Item=i32, Error=i32>> {
     #[async]
     for foo::Foo(i) in stream5() {
         stream_yield!(i * i);
@@ -145,14 +146,14 @@ pub fn _stream6() -> Result<(), i32> {
     Ok(())
 }
 
-#[async_stream_move(item = ())]
-pub fn _stream7() -> Result<(), i32> {
+#[async]
+pub fn _stream7() -> impl Stream<Item=(), Error=i32> {
     stream_yield!(());
     Ok(())
 }
 
-#[async_stream_move(item = [u32; 4])]
-pub fn _stream8() -> Result<(), i32> {
+#[async]
+pub fn _stream8() -> impl Stream<Item=[u32; 4], Error=i32> {
     stream_yield!([1, 2, 3, 4]);
     Ok(())
 }
@@ -160,26 +161,26 @@ pub fn _stream8() -> Result<(), i32> {
 struct A(i32);
 
 impl A {
-    #[async_move]
-    fn a_foo(self) -> Result<i32, i32> {
+    #[async]
+    fn a_foo(self) -> impl StableFuture<Item=i32, Error=i32> {
         Ok(self.0)
     }
 
-    #[async_move]
-    fn _a_foo2(self: Box<Self>) -> Result<i32, i32> {
+    #[async]
+    fn _a_foo2(self: Box<Self>) -> impl Future<Item=i32, Error=i32> {
         Ok(self.0)
     }
 }
 
-#[async_stream_move(item = u64)]
-fn await_item_stream() -> Result<(), i32> {
+#[async]
+fn await_item_stream() -> impl Stream<Item=u64, Error=i32> {
     stream_yield!(0);
     stream_yield!(1);
     Ok(())
 }
 
-#[async_move]
-fn test_await_item() -> Result<(), Never> {
+#[async]
+fn test_await_item() -> impl Future<Item=(), Error=Never> {
     let mut stream = await_item_stream();
 
     assert_eq!(await_item!(stream), Ok(Some(0)));
@@ -198,13 +199,13 @@ fn main() {
     assert_eq!(executor::block_on(_bar3()), Ok(2));
     assert_eq!(executor::block_on(_bar4()), Ok(10));
     assert_eq!(executor::block_on(_foo6(8)), Err(8));
-    assert_eq!(executor::block_on(A(11).a_foo()), Ok(11));
+    assert_eq!(block_on_stable(A(11).a_foo()), Ok(11));
     assert_eq!(executor::block_on(loop_in_loop()), Ok(true));
     assert_eq!(executor::block_on(test_await_item()), Ok(()));
 }
 
-#[async_move]
-fn loop_in_loop() -> Result<bool, i32> {
+#[async]
+fn loop_in_loop() -> impl Future<Item=bool, Error=i32> {
     let mut cnt = 0;
     let vec = vec![1, 2, 3, 4];
     #[async]
@@ -219,8 +220,8 @@ fn loop_in_loop() -> Result<bool, i32> {
     Ok(cnt == sum)
 }
 
-#[async_stream_move(item = i32)]
-fn poll_stream_after_error_stream() -> Result<(), ()> {
+#[async]
+fn poll_stream_after_error_stream() -> impl Stream<Item=i32, Error=()> {
     stream_yield!(5);
     Err(())
 }
