@@ -44,7 +44,7 @@ fn main() {
 }
 
 #[async]
-fn handle_client(socket: TcpStream) -> io::Result<u64> {
+fn handle_client(socket: TcpStream) -> impl Future<Item=u64, Error=io::Error> {
     let (reader, mut writer) = socket.split();
     let input = BufReader::new(reader);
 

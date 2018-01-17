@@ -25,7 +25,7 @@ pub use futures::*;
 
 pub mod prelude {
     pub use futures::prelude::*;
-    pub use async_macro::{async, async_stream, async_block, async_stream_block};
+    pub use async_macro::{async, async_block};
     pub use await_macro::{await, stream_yield};
 }
 
@@ -79,14 +79,11 @@ pub mod __rt {
 
     pub fn diverge<T>() -> T { loop {} }
 
-    /// Small shim to translate from a generator to a future.
+    /// Small shim to translate from a generator to a future or stream.
     ///
     /// This is the translation layer from the generator/coroutine protocol to
     /// the futures protocol.
-    struct GenFuture<T>(T);
-
-    /// Small shim to translate from a generator to a stream.
-    struct GenStream<U, T> {
+    pub struct GenFuture<U, T> {
         gen: T,
         done: bool,
         phantom: PhantomData<U>,
@@ -96,21 +93,14 @@ pub mod __rt {
     /// `async_stream`.
     pub enum Mu {}
 
-    pub fn gen<T>(gen: T) -> impl MyFuture<T::Return>
-        where T: Generator<Yield = Async<Mu>>,
+    pub fn gen<T, U>(gen: T) -> GenFuture<U, T>
+        where T: Generator<Yield = Async<U>>,
               T::Return: IsResult,
     {
-        GenFuture(gen)
+        GenFuture { gen, done: false, phantom: PhantomData }
     }
 
-    pub fn gen_stream<T, U>(gen: T) -> impl MyStream<U, T::Return>
-        where T: Generator<Yield = Async<U>>,
-              T::Return: IsResult<Ok = ()>,
-    {
-        GenStream { gen, done: false, phantom: PhantomData }
-    }
-
-    impl<T> Future for GenFuture<T>
+    impl<T> Future for GenFuture<Mu, T>
         where T: Generator<Yield = Async<Mu>>,
               T::Return: IsResult,
     {
@@ -118,7 +108,7 @@ pub mod __rt {
         type Error = <T::Return as IsResult>::Err;
 
         fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-            match self.0.resume() {
+            match self.gen.resume() {
                 GeneratorState::Yielded(Async::NotReady)
                     => Ok(Async::NotReady),
                 GeneratorState::Yielded(Async::Ready(mu))
@@ -129,7 +119,7 @@ pub mod __rt {
         }
     }
 
-    impl<U, T> Stream for GenStream<U, T>
+    impl<U, T> Stream for GenFuture<U, T>
         where T: Generator<Yield = Async<U>>,
               T::Return: IsResult<Ok = ()>,
     {
