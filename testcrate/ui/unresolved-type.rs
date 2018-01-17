@@ -5,12 +5,12 @@ extern crate futures_await as futures;
 use futures::prelude::*;
 
 #[async]
-fn foo() -> Result<A, u32> {
+fn foo() -> impl Future<Item=A, Error=u32> {
     Err(3)
 }
 
-#[async_stream(item = A)]
-fn foos() -> Result<(), u32> {
+#[async]
+fn foos() -> impl Stream<Item=A, Error=u32> {
     Err(3)
 }
 

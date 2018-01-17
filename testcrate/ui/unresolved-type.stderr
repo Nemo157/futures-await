@@ -1,16 +1,16 @@
 error[E0412]: cannot find type `A` in this scope
- --> $DIR/unresolved-type.rs:8:20
+ --> $DIR/unresolved-type.rs:8:30
   |
-8 | fn foo() -> Result<A, u32> {
-  |                    ^ not found in this scope
+8 | fn foo() -> impl Future<Item=A, Error=u32> {
+  |                              ^ not found in this scope
   |
   = help: there is an enum variant `futures::future::Either::A`, try using `futures::future::Either`?
 
 error[E0412]: cannot find type `A` in this scope
-  --> $DIR/unresolved-type.rs:12:23
+  --> $DIR/unresolved-type.rs:13:31
    |
-12 | #[async_stream(item = A)]
-   |                       ^ not found in this scope
+13 | fn foos() -> impl Stream<Item=A, Error=u32> {
+   |                               ^ not found in this scope
    |
    = help: there is an enum variant `futures::future::Either::A`, try using `futures::future::Either`?
 

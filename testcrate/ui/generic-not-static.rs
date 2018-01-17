@@ -5,18 +5,18 @@ extern crate futures_await as futures;
 use futures::prelude::*;
 
 #[async]
-fn foo<T>(t: T) -> Result<T, u32> {
+fn foo<T>(t: T) -> impl Future<Item=T, Error=u32> {
     Ok(t)
 }
 
-#[async_stream(item = T)]
-fn foos<T>(t: T) -> Result<(), u32> {
+#[async]
+fn foos<T>(t: T) -> impl Stream<Item=T, Error=u32> {
     stream_yield!(t);
     Ok(())
 }
 
-#[async_stream(item = i32)]
-fn foos2<T>(t: T) -> Result<(), u32> {
+#[async]
+fn foos2<T>(t: T) -> impl Stream<Item=i32, Error=u32> {
     Ok(())
 }
 

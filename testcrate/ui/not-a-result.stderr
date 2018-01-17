@@ -1,60 +1,84 @@
-error[E0277]: the trait bound `u32: futures::__rt::IsResult` is not satisfied
+error[E0277]: the trait bound `{integer}: futures::__rt::IsResult` is not satisfied
  --> $DIR/not-a-result.rs:8:13
   |
 8 | fn foo() -> u32 {
   |             ^^^ async functions must return a `Result` or a typedef of `Result`
   |
-  = help: the trait `futures::__rt::IsResult` is not implemented for `u32`
+  = help: the trait `futures::__rt::IsResult` is not implemented for `{integer}`
   = note: required by `futures::__rt::gen`
 
-error[E0277]: the trait bound `u32: futures::__rt::IsResult` is not satisfied
-  --> $DIR/not-a-result.rs:13:17
-   |
-13 |   fn bar() -> u32 {
-   |  _________________^
-14 | |     3
-15 | | }
-   | |_^ async functions must return a `Result` or a typedef of `Result`
-   |
-   = help: the trait `futures::__rt::IsResult` is not implemented for `u32`
+error[E0308]: mismatched types
+ --> $DIR/not-a-result.rs:8:13
+  |
+8 | fn foo() -> u32 {
+  |             ^^^
+  |             |
+  |             expected u32, found struct `std::boxed::Box`
+  |             expected `u32` because of return type
+  |
+  = note: expected type `u32`
+             found type `std::boxed::Box<futures::__rt::GenFuture<_, [generator@$DIR/not-a-result.rs:7:1: 10:2 _]>>`
 
-error[E0277]: the trait bound `u32: futures::__rt::IsResult` is not satisfied
+error[E0277]: the trait bound `{integer}: futures::__rt::IsResult` is not satisfied
   --> $DIR/not-a-result.rs:13:13
    |
-13 | fn bar() -> u32 {
-   |             ^^^ async functions must return a `Result` or a typedef of `Result`
+13 | fn bar() -> Box<u32> {
+   |             ^^^^^^^^ async functions must return a `Result` or a typedef of `Result`
    |
-   = help: the trait `futures::__rt::IsResult` is not implemented for `u32`
+   = help: the trait `futures::__rt::IsResult` is not implemented for `{integer}`
    = note: required by `futures::__rt::gen`
 
-error[E0277]: the trait bound `u32: futures::__rt::IsResult` is not satisfied
+error[E0308]: mismatched types
+  --> $DIR/not-a-result.rs:12:8
+   |
+12 |   #[async]
+   |  ________^
+13 | | fn bar() -> Box<u32> {
+   | |____________________^ expected u32, found struct `futures::__rt::GenFuture`
+   |
+   = note: expected type `u32`
+              found type `futures::__rt::GenFuture<_, [generator@$DIR/not-a-result.rs:12:1: 15:2 _]>`
+
+error[E0277]: the trait bound `{integer}: futures::__rt::IsResult` is not satisfied
   --> $DIR/not-a-result.rs:18:14
    |
 18 | fn foos() -> u32 {
    |              ^^^ async functions must return a `Result` or a typedef of `Result`
    |
-   = help: the trait `futures::__rt::IsResult` is not implemented for `u32`
-   = note: required by `futures::__rt::gen_stream`
+   = help: the trait `futures::__rt::IsResult` is not implemented for `{integer}`
+   = note: required by `futures::__rt::gen`
 
-error[E0277]: the trait bound `u32: futures::__rt::IsResult` is not satisfied
-  --> $DIR/not-a-result.rs:23:18
+error[E0308]: mismatched types
+  --> $DIR/not-a-result.rs:18:14
    |
-23 |   fn bars() -> u32 {
-   |  __________________^
-24 | |     3
-25 | | }
-   | |_^ async functions must return a `Result` or a typedef of `Result`
+18 | fn foos() -> u32 {
+   |              ^^^
+   |              |
+   |              expected u32, found struct `std::boxed::Box`
+   |              expected `u32` because of return type
    |
-   = help: the trait `futures::__rt::IsResult` is not implemented for `u32`
+   = note: expected type `u32`
+              found type `std::boxed::Box<futures::__rt::GenFuture<_, [generator@$DIR/not-a-result.rs:17:1: 20:2 _]>>`
 
-error[E0277]: the trait bound `u32: futures::__rt::IsResult` is not satisfied
+error[E0277]: the trait bound `{integer}: futures::__rt::IsResult` is not satisfied
   --> $DIR/not-a-result.rs:23:14
    |
-23 | fn bars() -> u32 {
-   |              ^^^ async functions must return a `Result` or a typedef of `Result`
+23 | fn bars() -> Box<u32> {
+   |              ^^^^^^^^ async functions must return a `Result` or a typedef of `Result`
    |
-   = help: the trait `futures::__rt::IsResult` is not implemented for `u32`
-   = note: required by `futures::__rt::gen_stream`
+   = help: the trait `futures::__rt::IsResult` is not implemented for `{integer}`
+   = note: required by `futures::__rt::gen`
 
-error: aborting due to 6 previous errors
+error[E0308]: mismatched types
+  --> $DIR/not-a-result.rs:22:8
+   |
+22 |   #[async]
+   |  ________^
+23 | | fn bars() -> Box<u32> {
+   | |_____________________^ expected u32, found struct `futures::__rt::GenFuture`
+   |
+   = note: expected type `u32`
+              found type `futures::__rt::GenFuture<_, [generator@$DIR/not-a-result.rs:22:1: 25:2 _]>`
+
+error: aborting due to 8 previous errors
 

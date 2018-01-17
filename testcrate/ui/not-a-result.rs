@@ -9,18 +9,18 @@ fn foo() -> u32 {
     3
 }
 
-#[async(boxed)]
-fn bar() -> u32 {
+#[async]
+fn bar() -> Box<u32> {
     3
 }
 
-#[async_stream(item = u32)]
+#[async]
 fn foos() -> u32 {
     3
 }
 
-#[async_stream(boxed, item = u32)]
-fn bars() -> u32 {
+#[async]
+fn bars() -> Box<u32> {
     3
 }
 

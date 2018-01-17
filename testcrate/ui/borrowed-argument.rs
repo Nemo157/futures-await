@@ -10,14 +10,14 @@ fn bar<'a>(a: &'a str) -> Box<Future<Item = i32, Error = u32> + 'a> {
 }
 
 #[async]
-fn foo(a: String) -> Result<i32, u32> {
+fn foo(a: String) -> impl Future<Item=i32, Error=u32> {
     await!(bar(&a))?;
     drop(a);
     Ok(1)
 }
 
-#[async_stream(item = i32)]
-fn foos(a: String) -> Result<(), u32> {
+#[async]
+fn foos(a: String) -> impl Stream<Item=i32, Error=u32> {
     await!(bar(&a))?;
     drop(a);
     stream_yield!(5);
