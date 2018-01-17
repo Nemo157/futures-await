@@ -6,22 +6,22 @@ use futures::stable::block_on_stable;
 use futures::prelude::*;
 
 #[async]
-fn foo() -> Result<i32, i32> {
+fn foo() -> impl StableFuture<Item=i32, Error=i32> {
     Ok(1)
 }
 
 #[async]
-fn bar(x: &i32) -> Result<i32, i32> {
+fn bar(x: &i32) -> impl StableFuture<Item=i32, Error=i32> {
     Ok(*x)
 }
 
 #[async]
-fn baz(x: i32) -> Result<i32, i32> {
+fn baz(x: i32) -> impl StableFuture<Item=i32, Error=i32> {
     await!(bar(&x))
 }
 
-#[async_stream(item = u64)]
-fn _stream1() -> Result<(), i32> {
+#[async]
+fn _stream1() -> impl StableStream<Item=u64, Error=i32> {
     fn integer() -> u64 { 1 }
     let x = &integer();
     stream_yield!(0);
@@ -30,7 +30,7 @@ fn _stream1() -> Result<(), i32> {
 }
 
 #[async]
-pub fn uses_async_for() -> Result<Vec<u64>, i32> {
+pub fn uses_async_for() -> impl StableFuture<Item=Vec<u64>, Error=i32> {
     let mut v = vec![];
     #[async]
     for i in _stream1() {
