@@ -69,6 +69,16 @@ fn _foo9() -> Box<Future<Item=(), Error=Never> + Send> {
 }
 
 #[async]
+fn _foo10<'a>(a: &'a i32, b: &'a i32) -> impl Future<Item=i32, Error=i32> + 'a {
+    return Ok(a + b)
+}
+
+#[async]
+fn _foo11(a: &i32) -> impl Future<Item=&i32, Error=i32> {
+    return Ok(a)
+}
+
+#[async]
 fn _bar() -> impl Future<Item=i32, Error=i32> {
     await!(foo())
 }
@@ -155,6 +165,14 @@ pub fn _stream7() -> impl Stream<Item=(), Error=i32> {
 #[async]
 pub fn _stream8() -> impl Stream<Item=[u32; 4], Error=i32> {
     stream_yield!([1, 2, 3, 4]);
+    Ok(())
+}
+
+#[async]
+pub fn _stream9(text: &str) -> impl Stream<Item=&str, Error=i32> {
+    for word in text.split(' ') {
+        stream_yield!(word);
+    }
     Ok(())
 }
 
