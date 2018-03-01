@@ -12,6 +12,8 @@
 //!
 //! See the crates's README for more information about usage.
 
+#![no_std]
+
 #![feature(conservative_impl_trait)]
 #![feature(generator_trait)]
 #![feature(use_extern_macros)]
@@ -40,13 +42,15 @@ pub mod prelude {
 /// your code to be stable.
 #[doc(hidden)]
 pub mod __rt {
+    pub extern crate core;
     pub extern crate std;
-    pub use std::ops::Generator;
+
+    pub use core::ops::Generator;
 
     use futures::Poll;
     use futures::{Future, Async, Stream};
-    use std::ops::GeneratorState;
-    use std::marker::PhantomData;
+    use core::ops::GeneratorState;
+    use core::marker::PhantomData;
 
     pub trait MyFuture<T: IsResult>: Future<Item=T::Ok, Error = T::Err> {}
 

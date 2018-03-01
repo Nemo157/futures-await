@@ -420,8 +420,8 @@ impl Fold for ExpandAsyncFor {
                     match r {
                         futures_await::Async::Ready(e) => {
                             match e {
-                                futures_await::__rt::std::option::Option::Some(e) => e,
-                                futures_await::__rt::std::option::Option::None => break,
+                                futures_await::__rt::core::option::Option::Some(e) => e,
+                                futures_await::__rt::core::option::Option::None => break,
                             }
                         }
                         futures_await::Async::NotReady => {
