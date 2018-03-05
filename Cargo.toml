@@ -21,6 +21,19 @@ members = ["testcrate"]
 [dependencies]
 futures-await-async-macro = { path = "futures-await-async-macro", version = "0.2.0-alpha" }
 futures-await-await-macro = { path = "futures-await-await-macro", version = "0.2.0-alpha" }
-futures = "0.2.0-alpha"
-futures-stable = "0.2.0-alpha"
-pin-api = "0.1.1"
+
+[dependencies.futures]
+version = "0.2.0-alpha"
+default-features = false
+
+[dependencies.futures-stable]
+version = "0.2.0-alpha"
+default-features = false
+
+[dependencies.pin-api]
+version = "0.1.1"
+default-features = false
+
+[features]
+std = ["futures/std", "futures-stable/std", "pin-api/std"]
+default = ["std"]
