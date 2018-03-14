@@ -23,17 +23,15 @@ futures-await-async-macro = { path = "futures-await-async-macro", version = "0.2
 futures-await-await-macro = { path = "futures-await-await-macro", version = "0.2.0-alpha" }
 
 [dependencies.futures]
-version = "0.2.0-alpha"
+git = "https://github.com/Nemo157/futures-rs"
+branch = "impl-future-for-pinmut-stablefuture"
 default-features = false
-
-[dependencies.futures-stable]
-version = "0.2.0-alpha"
-default-features = false
+features = ["nightly"]
 
 [dependencies.pin-api]
 version = "0.1.1"
 default-features = false
 
 [features]
-std = ["futures/std", "futures-stable/std", "pin-api/std"]
+std = ["futures/std", "pin-api/std"]
 default = ["std"]
