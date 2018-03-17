@@ -1,6 +1,6 @@
 use std::ops::{Generator, GeneratorState};
 
-use super::{IsResult, Reset, CTX};
+use super::{IsResult, Reset, CTX, GenAsync};
 
 use futures::Never;
 use futures::task;
@@ -13,20 +13,7 @@ impl<F, T> MyFuture<T> for F
           T: IsResult
 {}
 
-/// Small shim to translate from a generator to a future.
-///
-/// This is the translation layer from the generator/coroutine protocol to
-/// the futures protocol.
-struct GenFuture<T>(T);
-
-pub fn gen_move<T>(gen: T) -> impl MyFuture<T::Return>
-    where T: Generator<Yield = Async<Never>>,
-          T::Return: IsResult,
-{
-    GenFuture(gen)
-}
-
-impl<T> Future for GenFuture<T>
+impl<T> Future for GenAsyncMove<T, Never>
     where T: Generator<Yield = Async<Never>>,
           T::Return: IsResult,
 {
@@ -39,7 +26,7 @@ impl<T> Future for GenFuture<T>
             // Because we are controlling the creation of our underlying
             // generator, we know that this is definitely a movable generator
             // so calling resume is always safe.
-            match unsafe { self.0.resume() } {
+            match unsafe { self.gen.resume() } {
                 GeneratorState::Yielded(Async::Pending)
                     => Ok(Async::Pending),
                 GeneratorState::Yielded(Async::Ready(mu))

@@ -1,12 +1,11 @@
 use std::mem::Pin;
 use std::ops::{Generator, GeneratorState};
-use std::marker::{PhantomData, Unpin};
 
 use futures::task;
 use futures::prelude::{Poll, Async};
 use futures::stable::StableStream;
 
-use super::{CTX, Reset, IsResult};
+use super::{CTX, Reset, IsResult, GenAsync};
 
 pub trait MyStableStream<T, U: IsResult<Ok=()>>: StableStream<Item=T, Error=U::Err> {}
 
@@ -15,23 +14,7 @@ impl<F, T, U> MyStableStream<T, U> for F
           U: IsResult<Ok=()>
 {}
 
-/// Small shim to translate from a generator to a stream.
-struct GenStableStream<U, T> {
-    gen: T,
-    done: bool,
-    phantom: PhantomData<U>,
-}
-
-impl<U, T> !Unpin for GenStableStream<U, T> { }
-
-pub fn gen_stream_pinned<T, U>(gen: T) -> impl MyStableStream<U, T::Return>
-    where T: Generator<Yield = Async<U>>,
-          T::Return: IsResult<Ok = ()>,
-{
-    GenStableStream { gen, done: false, phantom: PhantomData }
-}
-
-impl<U, T> StableStream for GenStableStream<U, T>
+impl<T, U> StableStream for GenAsync<T, U>
     where T: Generator<Yield = Async<U>>,
           T::Return: IsResult<Ok = ()>,
 {
