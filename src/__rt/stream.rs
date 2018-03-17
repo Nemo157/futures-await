@@ -1,10 +1,9 @@
 use std::ops::{Generator, GeneratorState};
-use std::marker::PhantomData;
 
 use futures::task;
 use futures::prelude::{Poll, Async, Stream};
 
-use super::{CTX, Reset, IsResult};
+use super::{CTX, Reset, IsResult, GenAsync};
 
 pub trait MyStream<T, U: IsResult<Ok=()>>: Stream<Item=T, Error=U::Err> {}
 
@@ -13,21 +12,7 @@ impl<F, T, U> MyStream<T, U> for F
           U: IsResult<Ok=()>
 {}
 
-/// Small shim to translate from a generator to a stream.
-struct GenStream<U, T> {
-    gen: T,
-    done: bool,
-    phantom: PhantomData<U>,
-}
-
-pub fn gen_stream<T, U>(gen: T) -> impl MyStream<U, T::Return>
-    where T: Generator<Yield = Async<U>>,
-          T::Return: IsResult<Ok = ()>,
-{
-    GenStream { gen, done: false, phantom: PhantomData }
-}
-
-impl<U, T> Stream for GenStream<U, T>
+impl<T, U> Stream for GenAsync<T, U>
     where T: Generator<Yield = Async<U>>,
           T::Return: IsResult<Ok = ()>,
 {

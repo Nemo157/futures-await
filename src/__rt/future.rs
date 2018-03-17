@@ -1,6 +1,6 @@
 use std::ops::{Generator, GeneratorState};
 
-use super::{IsResult, Reset, CTX};
+use super::{IsResult, Reset, CTX, GenAsync};
 
 use futures::Never;
 use futures::task;
@@ -13,20 +13,7 @@ impl<F, T> MyFuture<T> for F
           T: IsResult
 {}
 
-/// Small shim to translate from a generator to a future.
-///
-/// This is the translation layer from the generator/coroutine protocol to
-/// the futures protocol.
-struct GenFuture<T>(T);
-
-pub fn gen_move<T>(gen: T) -> impl MyFuture<T::Return>
-    where T: Generator<Yield = Async<Never>>,
-          T::Return: IsResult,
-{
-    GenFuture(gen)
-}
-
-impl<T> Future for GenFuture<T>
+impl<T> Future for GenAsync<T, Never>
     where T: Generator<Yield = Async<Never>>,
           T::Return: IsResult,
 {
@@ -36,7 +23,7 @@ impl<T> Future for GenFuture<T>
     fn poll(&mut self, ctx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         CTX.with(|cell| {
             let _r = Reset::new(ctx, cell);
-            match self.0.resume() {
+            match self.gen.resume() {
                 GeneratorState::Yielded(Async::Pending)
                     => Ok(Async::Pending),
                 GeneratorState::Yielded(Async::Ready(mu))

@@ -1,8 +1,8 @@
 use std::ops::{Generator, GeneratorState};
 
-use __rt::pin_api::{mem::Pin, marker::Unpin};
+use __rt::pin_api::mem::Pin;
 
-use super::{IsResult, Reset, CTX};
+use super::{IsResult, Reset, CTX, GenAsync};
 
 use futures::Never;
 use futures::stable::StableFuture;
@@ -16,11 +16,7 @@ impl<F, T> MyStableFuture<T> for F
           T: IsResult,
 {}
 
-struct GenStableFuture<T>(T);
-
-impl<T> !Unpin for GenStableFuture<T> { }
-
-impl<T> StableFuture for GenStableFuture<T>
+impl<T> StableFuture for GenAsync<T, Never>
     where T: Generator<Yield = Async<Never>>,
           T::Return: IsResult,
 {
@@ -41,11 +37,4 @@ impl<T> StableFuture for GenStableFuture<T>
             }
         })
     }
-}
-
-pub fn gen_pinned<'a, T>(gen: T) -> impl MyStableFuture<T::Return> + 'a
-    where T: Generator<Yield = Async<Never>> + 'a,
-          T::Return: IsResult,
-{
-    GenStableFuture(gen)
 }
