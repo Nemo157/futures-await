@@ -193,7 +193,37 @@ pub fn async(attribute: TokenStream, function: TokenStream) -> TokenStream {
     let output_span = first_last(&output);
     let gen_function = quote_cs! { ::futures::__rt::gen_async };
     let gen_function = respan(gen_function.into(), &output_span);
-    let body_inner = if /*TODO: pinned*/ false {
+    // TODO: Don't use string matching for this
+    let (pinned, boxed) = match output {
+        Type::Path(_) => (false, true),
+        Type::ImplTrait(TypeImplTrait { ref bounds, .. }) => {
+            if let Some(TypeParamBound::Trait(bound)) = bounds.first().map(punctuated::Pair::into_value) {
+                if let Some(segment) = bound.path.segments.last().map(punctuated::Pair::into_value) {
+                    match segment.ident.as_ref() {
+                        "Future" => (false, false),
+                        "Stream" => (false, false),
+                        "StableFuture" => (true, false),
+                        "StableStream" => (true, false),
+                        _ => {
+                            panic!("#[async] function with an `impl Trait` return type must have one of\
+                                `Future`, `Stream`, `StableFuture` or `StableStream` as the first bound");
+                        }
+                    }
+                } else {
+                    panic!("#[async] function with an `impl Trait` return type must have one of\
+                            `Future`, `Stream`, `StableFuture` or `StableStream` as the first bound");
+                }
+            } else {
+                panic!("#[async] function with an `impl Trait` return type must have one of\
+                        `Future`, `Stream`, `StableFuture` or `StableStream` as the first bound");
+            }
+        }
+        _ => {
+            panic!("#[async] function return type must be one of `impl \
+                    Future`, `impl Stream`, `Box<Future>` or `Box<Stream>`");
+        }
+    };
+    let body_inner = if pinned {
         quote_cs! {
             #gen_function (#[allow(unused_unsafe)] unsafe { static move || #gen_body })
         }
@@ -201,12 +231,6 @@ pub fn async(attribute: TokenStream, function: TokenStream) -> TokenStream {
         quote_cs! {
             #gen_function (move || #gen_body)
         }
-    };
-    let boxed = match output {
-        Type::Path(_) => true,
-        Type::ImplTrait(_) => false,
-        _ => panic!("#[async] function return type must be one of `impl \
-                    Future`, `impl Stream`, `Box<Future>` or `Box<Stream>`"),
     };
     let body_inner = if boxed {
         let body = quote_cs! { ::futures::__rt::std::boxed::Box::new(#body_inner) };
