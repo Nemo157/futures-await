@@ -2,7 +2,7 @@
 
 extern crate futures_await as futures;
 
-use futures::stable::block_on_stable;
+use futures::stable::{StableFuture, StableStream, block_on_stable};
 use futures::prelude::*;
 
 #[async]
@@ -11,7 +11,7 @@ fn foo() -> impl StableFuture<Item=i32, Error=i32> {
 }
 
 #[async]
-fn bar(x: &i32) -> impl StableFuture<Item=i32, Error=i32> {
+fn bar(x: &i32) -> impl StableFuture<Item=i32, Error=i32> + '_ {
     Ok(*x)
 }
 

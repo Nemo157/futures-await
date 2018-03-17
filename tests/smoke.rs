@@ -13,6 +13,7 @@ use std::io;
 
 use futures::Never;
 use futures::future::poll_fn;
+use futures::stable::{StableFuture, block_on_stable};
 use futures::prelude::*;
 
 #[async]
@@ -216,7 +217,7 @@ fn main() {
     assert_eq!(executor::block_on(_bar3()), Ok(2));
     assert_eq!(executor::block_on(_bar4()), Ok(10));
     assert_eq!(executor::block_on(_foo6(8)), Err(8));
-    assert_eq!(executor::block_on(A(11).a_foo()), Ok(11));
+    assert_eq!(block_on_stable(A(11).a_foo()), Ok(11));
     assert_eq!(executor::block_on(loop_in_loop()), Ok(true));
     assert_eq!(executor::block_on(test_await_item()), Ok(()));
 }

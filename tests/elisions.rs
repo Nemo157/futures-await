@@ -2,28 +2,28 @@
 
 extern crate futures_await as futures;
 
-use futures::stable::block_on_stable;
+use futures::stable::{StableFuture, StableStream, block_on_stable};
 use futures::prelude::*;
 
 struct Ref<'a, T: 'a>(&'a T);
 
 #[async]
-fn references(x: &i32) -> impl StableFuture<Item=i32, Error=i32> {
+fn references(x: &i32) -> impl StableFuture<Item=i32, Error=i32> + '_ {
     Ok(*x)
 }
 
 #[async]
-fn new_types(x: Ref<'_, i32>) -> impl StableFuture<Item=i32, Error=i32> {
+fn new_types(x: Ref<'_, i32>) -> impl StableFuture<Item=i32, Error=i32> + '_ {
     Ok(*x.0)
 }
 
 #[async]
-fn references_move(x: &i32) -> impl Future<Item=i32, Error=i32> {
+fn references_move(x: &i32) -> impl Future<Item=i32, Error=i32> + '_ {
     Ok(*x)
 }
 
 #[async]
-fn _streams(x: &i32) -> impl StableStream<Item=i32, Error=i32> {
+fn _streams(x: &i32) -> impl StableStream<Item=i32, Error=i32> + '_ {
     stream_yield!(*x);
     Ok(())
 }
