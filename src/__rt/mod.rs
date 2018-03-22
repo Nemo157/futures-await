@@ -1,5 +1,6 @@
 mod future;
 mod stream;
+mod maybe_box;
 // mod pinned_future; mod pinned_stream;
 
 use std::cell::Cell;
@@ -12,6 +13,7 @@ pub use self::future::*;
 pub use self::stream::*;
 // pub use self::pinned_future::*;
 // pub use self::pinned_stream::*;
+pub use self::maybe_box::MaybeBox;
 
 pub use futures::prelude::{Async, Future, Stream};
 pub use futures::stable::{StableFuture, StableStream};

@@ -233,7 +233,9 @@ pub fn async(attribute: TokenStream, function: TokenStream) -> TokenStream {
         }
     };
     let body_inner = if boxed {
-        let body = quote_cs! { ::futures::__rt::std::boxed::Box::new(#body_inner) };
+        let body = quote_cs! {
+            <#output as ::futures::__rt::MaybeBox<_>>::maybe_into_box(#body_inner)
+        };
         respan(body.into(), &output_span)
     } else {
         body_inner.into()
@@ -252,7 +254,7 @@ pub fn async(attribute: TokenStream, function: TokenStream) -> TokenStream {
         #body
     };
 
-    // println!("{}", transformed);
+    println!("{}", transformed);
     transformed.into()
 }
 
