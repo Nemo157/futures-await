@@ -23,7 +23,7 @@ futures-await-async-macro = { path = "futures-await-async-macro", version = "0.2
 futures-await-await-macro = { path = "futures-await-await-macro", version = "0.2.0-alpha" }
 
 [dependencies.futures]
-git = "https://github.com/rust-lang-nursery/futures-rs.git"
+git = "https://github.com/Nemo157/futures-rs"
 default-features = false
 features = ["nightly"]
 
