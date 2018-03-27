@@ -1,17 +1,17 @@
 mod future;
 mod stream;
-// mod pinned_future; mod pinned_stream;
+mod pinned_future; mod pinned_stream;
 
 use std::cell::Cell;
 use std::mem;
 use std::ptr;
 use futures::task;
-use std::marker::PhantomData;
+use std::marker::{PhantomData, Unpin};
 
 pub use self::future::*;
 pub use self::stream::*;
-// pub use self::pinned_future::*;
-// pub use self::pinned_stream::*;
+pub use self::pinned_future::*;
+pub use self::pinned_stream::*;
 
 pub use futures::prelude::{Async, Future, Stream};
 pub use futures::stable::{StableFuture, StableStream};
@@ -82,8 +82,27 @@ pub struct GenAsync<Gen, Yield> {
     phantom: PhantomData<Yield>,
 }
 
+/// Small shim to translate from a generator to a future or stream.
+///
+/// This is the translation layer from the generator/coroutine protocol to
+/// the futures protocol.
+pub struct GenAsyncMove<Gen, Yield> {
+    gen: Gen,
+    done: bool,
+    phantom: PhantomData<Yield>,
+}
+
+impl<Gen, Yield> !Unpin for GenAsync<Gen, Yield> {
+}
+
 pub fn gen_async<Gen, Yield>(gen: Gen) -> GenAsync<Gen, Yield>
     where Gen: Generator<Yield = Async<Yield>>, Gen::Return: IsResult,
 {
     GenAsync { gen, done: false, phantom: PhantomData }
+}
+
+pub fn gen_async_move<Gen, Yield>(gen: Gen) -> GenAsyncMove<Gen, Yield>
+    where Gen: Generator<Yield = Async<Yield>>, Gen::Return: IsResult,
+{
+    GenAsyncMove { gen, done: false, phantom: PhantomData }
 }

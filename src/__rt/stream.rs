@@ -3,7 +3,7 @@ use std::ops::{Generator, GeneratorState};
 use futures::task;
 use futures::prelude::{Poll, Async, Stream};
 
-use super::{CTX, Reset, IsResult, GenAsync};
+use super::{CTX, Reset, IsResult, GenAsyncMove};
 
 pub trait MyStream<T, U: IsResult<Ok=()>>: Stream<Item=T, Error=U::Err> {}
 
@@ -12,12 +12,12 @@ impl<F, T, U> MyStream<T, U> for F
           U: IsResult<Ok=()>
 {}
 
-impl<T, U> Stream for GenAsyncMove<T, U>
-    where T: Generator<Yield = Async<U>>,
-          T::Return: IsResult<Ok = ()>,
+impl<Gen, Yield> Stream for GenAsyncMove<Gen, Yield>
+    where Gen: Generator<Yield = Async<Yield>>,
+          Gen::Return: IsResult<Ok = ()>,
 {
-    type Item = U;
-    type Error = <T::Return as IsResult>::Err;
+    type Item = Yield;
+    type Error = <Gen::Return as IsResult>::Err;
 
     fn poll_next(&mut self, ctx: &mut task::Context) -> Poll<Option<Self::Item>, Self::Error> {
         CTX.with(|cell| {

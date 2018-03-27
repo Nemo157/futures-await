@@ -17,7 +17,7 @@ fn new_types(x: Ref<'_, i32>) -> impl StableFuture<Item=i32, Error=i32> + '_ {
     Ok(*x.0)
 }
 
-#[async]
+#[async(unpinned)]
 fn references_move(x: &i32) -> impl Future<Item=i32, Error=i32> + '_ {
     Ok(*x)
 }

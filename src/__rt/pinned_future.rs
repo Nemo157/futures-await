@@ -1,4 +1,3 @@
-use std::marker::Unpin;
 use std::mem::Pin;
 use std::ops::{Generator, GeneratorState};
 
@@ -16,12 +15,12 @@ impl<F, T> MyStableFuture<T> for F
           T: IsResult,
 {}
 
-impl<T> StableFuture for GenAsync<T, Never>
-    where T: Generator<Yield = Async<Never>>,
-          T::Return: IsResult,
+impl<Gen> StableFuture for GenAsync<Gen, Never>
+    where Gen: Generator<Yield = Async<Never>>,
+          Gen::Return: IsResult,
 {
-    type Item = <T::Return as IsResult>::Ok;
-    type Error = <T::Return as IsResult>::Err;
+    type Item = <Gen::Return as IsResult>::Ok;
+    type Error = <Gen::Return as IsResult>::Err;
 
     fn poll(mut self: Pin<Self>, ctx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         CTX.with(|cell| {
@@ -29,7 +28,7 @@ impl<T> StableFuture for GenAsync<T, Never>
             let this: &mut Self = unsafe { Pin::get_mut(&mut self) };
             // This is an immovable generator, but since we're only accessing
             // it via a Pin this is safe.
-            match unsafe { this.0.resume() } {
+            match unsafe { this.gen.resume() } {
                 GeneratorState::Yielded(Async::Pending)
                     => Ok(Async::Pending),
                 GeneratorState::Yielded(Async::Ready(mu))

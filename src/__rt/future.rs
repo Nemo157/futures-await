@@ -1,6 +1,6 @@
 use std::ops::{Generator, GeneratorState};
 
-use super::{IsResult, Reset, CTX, GenAsync};
+use super::{IsResult, Reset, CTX, GenAsyncMove};
 
 use futures::Never;
 use futures::task;
@@ -13,12 +13,12 @@ impl<F, T> MyFuture<T> for F
           T: IsResult
 {}
 
-impl<T> Future for GenAsyncMove<T, Never>
-    where T: Generator<Yield = Async<Never>>,
-          T::Return: IsResult,
+impl<Gen> Future for GenAsyncMove<Gen, Never>
+    where Gen: Generator<Yield = Async<Never>>,
+          Gen::Return: IsResult,
 {
-    type Item = <T::Return as IsResult>::Ok;
-    type Error = <T::Return as IsResult>::Err;
+    type Item = <Gen::Return as IsResult>::Ok;
+    type Error = <Gen::Return as IsResult>::Err;
 
     fn poll(&mut self, ctx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         CTX.with(|cell| {

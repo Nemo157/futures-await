@@ -23,6 +23,7 @@ use proc_macro2::Span;
 use proc_macro::{TokenStream, TokenTree, Delimiter, TokenNode};
 use quote::{Tokens, ToTokens};
 use syn::*;
+use syn::punctuated::Punctuated;
 use syn::fold::Fold;
 
 macro_rules! quote_cs {
@@ -31,11 +32,34 @@ macro_rules! quote_cs {
 
 #[proc_macro_attribute]
 pub fn async(attribute: TokenStream, function: TokenStream) -> TokenStream {
-    // Handle arguments to the #[async] attribute, if any
-    let attribute = attribute.to_string();
-    if attribute != "" {
-        panic!("the #[async] attribute takes no arguments");
-    };
+    let args = syn::parse::<AsyncArgs>(attribute)
+        .expect("failed to parse attribute arguments");
+
+    let mut boxed = false;
+    let mut unpinned = false;
+
+    for arg in args.0 {
+        match arg.as_ref() {
+            "boxed" => {
+                if boxed {
+                    panic!("duplicate 'boxed' argument to #[async]");
+                }
+                boxed = true;
+            }
+            "unpinned" => {
+                if unpinned {
+                    panic!("duplicate 'unpinned' argument to #[async]");
+                }
+                unpinned = true;
+            }
+            term => {
+                panic!("unexpected #[async_stream] argument '{}'", term);
+            }
+        }
+    }
+
+    let boxed = boxed;
+    let unpinned = unpinned;
 
     // Parse our item, expecting a function. This function may be an actual
     // top-level function or it could be a method (typically dictated by the
@@ -191,52 +215,43 @@ pub fn async(attribute: TokenStream, function: TokenStream) -> TokenStream {
     // as currently errors related to it being a result are targeted here. Not
     // sure if more errors will highlight this function call...
     let output_span = first_last(&output);
-    let gen_function = quote_cs! { ::futures::__rt::gen_async };
+    let gen_function = if unpinned {
+        quote_cs! { ::futures::__rt::gen_async_move }
+    } else {
+        quote_cs! { ::futures::__rt::gen_async }
+    };
     let gen_function = respan(gen_function.into(), &output_span);
-    // TODO: Don't use string matching for this
-    let (pinned, boxed) = match output {
-        Type::Path(_) => (false, true),
-        Type::ImplTrait(TypeImplTrait { ref bounds, .. }) => {
-            if let Some(TypeParamBound::Trait(bound)) = bounds.first().map(punctuated::Pair::into_value) {
-                if let Some(segment) = bound.path.segments.last().map(punctuated::Pair::into_value) {
-                    match segment.ident.as_ref() {
-                        "Future" => (false, false),
-                        "Stream" => (false, false),
-                        "StableFuture" => (true, false),
-                        "StableStream" => (true, false),
-                        _ => {
-                            panic!("#[async] function with an `impl Trait` return type must have one of\
-                                `Future`, `Stream`, `StableFuture` or `StableStream` as the first bound");
-                        }
-                    }
-                } else {
-                    panic!("#[async] function with an `impl Trait` return type must have one of\
-                            `Future`, `Stream`, `StableFuture` or `StableStream` as the first bound");
-                }
-            } else {
-                panic!("#[async] function with an `impl Trait` return type must have one of\
-                        `Future`, `Stream`, `StableFuture` or `StableStream` as the first bound");
-            }
+    let body_inner = match (boxed, unpinned) {
+        (true, true) => {
+            let body = quote_cs! {
+                #gen_function (move || #gen_body)
+            };
+            let body = quote_cs! {
+                ::futures::__rt::std::boxed::Box::new(#body)
+            };
+            respan(body.into(), &output_span)
         }
-        _ => {
-            panic!("#[async] function return type must be one of `impl \
-                    Future`, `impl Stream`, `Box<Future>` or `Box<Stream>`");
+        (true, false) => {
+            let body = quote_cs! {
+                #gen_function (static move || #gen_body)
+            };
+            let body = quote_cs! {
+                ::futures::__rt::std::boxed::PinBox::new(#body)
+            };
+            respan(body.into(), &output_span)
         }
-    };
-    let body_inner = if pinned {
-        quote_cs! {
-            #gen_function (static move || #gen_body)
+        (false, true) => {
+            let body = quote_cs! {
+                #gen_function (move || #gen_body)
+            };
+            respan(body.into(), &output_span)
         }
-    } else {
-        quote_cs! {
-            #gen_function (move || #gen_body)
+        (false, false) => {
+            let body = quote_cs! {
+                #gen_function (static move || #gen_body)
+            };
+            respan(body.into(), &output_span)
         }
-    };
-    let body_inner = if boxed {
-        let body = quote_cs! { ::futures::__rt::std::boxed::Box::new(#body_inner) };
-        respan(body.into(), &output_span)
-    } else {
-        body_inner.into()
     };
     let mut body = Tokens::new();
     block.brace_token.surround(&mut body, |tokens| {
@@ -371,4 +386,13 @@ fn respan(input: proc_macro2::TokenStream,
         token.span = last_span;
     }
     new_tokens.into_iter().collect()
+}
+
+struct AsyncArgs(Vec<syn::Ident>);
+
+impl synom::Synom for AsyncArgs {
+    named!(parse -> Self, map!(
+        option!(parens!(call!(Punctuated::<syn::Ident, syn::token::Comma>::parse_separated_nonempty))),
+        |p| AsyncArgs(p.map(|d| d.1.into_iter().collect()).unwrap_or_default())
+    ));
 }
