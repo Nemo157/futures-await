@@ -4,7 +4,7 @@ extern crate futures_await as futures;
 
 use futures::prelude::*;
 
-#[async]
+#[async(unpinned)]
 fn foobar() -> impl Future<Item=Option<i32>, Error=()> {
     let val = Some(42);
     if val.is_none() {
@@ -14,7 +14,7 @@ fn foobar() -> impl Future<Item=Option<i32>, Error=()> {
     Ok(val)
 }
 
-#[async]
+#[async(unpinned)]
 fn foobars() -> impl Stream<Item=Option<i32>, Error=()> {
     let val = Some(42);
     if val.is_none() {
@@ -26,7 +26,7 @@ fn foobars() -> impl Stream<Item=Option<i32>, Error=()> {
     Ok(())
 }
 
-#[async]
+#[async(unpinned)]
 fn tuple() -> impl Future<Item=(i32, i32), Error=()> {
     if false {
         return Ok(3);

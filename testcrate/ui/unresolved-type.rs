@@ -4,13 +4,12 @@ extern crate futures_await as futures;
 
 use futures::prelude::*;
 
-#[async]
+#[async(unpinned)]
 fn foo() -> impl Future<Item=Left, Error=u32> {
     Err(3)
 }
 
-<<<<<<< HEAD
-#[async]
+#[async(unpinned)]
 fn foos() -> impl Stream<Item=Left, Error=u32> {
     Err(3)
 }
